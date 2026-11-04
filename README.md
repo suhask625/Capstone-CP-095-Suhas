@@ -139,13 +139,13 @@ Reopen Count: 0
 - Search and filter functionality.
 - Developer performance analytics.
 - Duplicate bug detection.
-
+  
 ## Team Members
 
-| Team Member | GitHub |
+| Team Member | GitHub Profile |
 |---|---|
 | Suhas | [@suhask625](https://github.com/suhask625) |
-| Vishal | |
+| Vishal | [@vishalsingh959147-byte](https://github.com/vishalsingh959147-byte) |
 
 ## Project Information
 
