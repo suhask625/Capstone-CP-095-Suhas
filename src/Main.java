@@ -121,14 +121,19 @@ public class Main {
         }
     }
 
+    // Allowed severity values
+    static final String[] SEVERITIES = {"Low", "Medium", "High", "Critical"};
+
     // Helper: Read and validate bug severity
     static String readSeverity() {
         while (true) {
             System.out.print("Enter bug severity (Low / Medium / High / Critical): ");
             String input = sc.nextLine().trim();
-            if (input.equalsIgnoreCase("Low") || input.equalsIgnoreCase("Medium") ||
-                input.equalsIgnoreCase("High") || input.equalsIgnoreCase("Critical")) {
-                return Character.toUpperCase(input.charAt(0)) + input.substring(1).toLowerCase();
+
+            for (String severity : SEVERITIES) {
+                if (severity.equalsIgnoreCase(input)) {
+                    return severity;
+                }
             }
             System.out.println("Invalid severity! Allowed values are: Low, Medium, High, Critical.");
         }
@@ -208,97 +213,58 @@ public class Main {
         System.out.println("Status updated to: " + bug.status);
     }
 
+    // Status options shown in the "Update status" menu (menu number = index + 1)
+    static final String[] STATUS_OPTIONS = {"Assigned", "Fixed", "Verified", "Closed", "Reopened"};
+
+    // Lifecycle rule: can this bug move from its current status to newStatus?
+    static boolean canMoveTo(Bug bug, String newStatus) {
+        switch (bug.status) {
+            case "New":      return newStatus.equals("Assigned");
+            case "Assigned": return newStatus.equals("Fixed");
+            case "Fixed":    return newStatus.equals("Verified");
+            case "Verified": return newStatus.equals("Closed") || newStatus.equals("Reopened");
+            case "Reopened": return newStatus.equals("Assigned");
+            default:         return false;   // Closed bugs cannot move anywhere
+        }
+    }
+
     // Feature 4: Update bug lifecycle status
     static void updateBugStatus() {
         System.out.println("\n--- Update Bug Lifecycle Status ---");
 
         int id = readInteger("Enter Bug ID: ");
+        Bug bug = findBugById(id);
 
-        Bug selectedBug = findBugById(id);
-
-        if (selectedBug == null) {
+        if (bug == null) {
             System.out.println("Error: Bug ID " + id + " not found.");
             return;
         }
 
-        System.out.println("Selected Bug   : [" + selectedBug.bugId + "] " + selectedBug.title);
-        System.out.println("Current Status : " + selectedBug.status);
+        System.out.println("Selected Bug   : [" + bug.bugId + "] " + bug.title);
+        System.out.println("Current Status : " + bug.status);
         System.out.println("\nSelect new status:");
-        System.out.println("1. Assigned");
-        System.out.println("2. Fixed");
-        System.out.println("3. Verified");
-        System.out.println("4. Closed");
-        System.out.println("5. Reopened");
+        for (int i = 0; i < STATUS_OPTIONS.length; i++) {
+            System.out.println((i + 1) + ". " + STATUS_OPTIONS[i]);
+        }
         System.out.print("Enter choice (1-5): ");
 
-        String statusInput = sc.nextLine().trim();
         int statusChoice;
-
         try {
-            statusChoice = Integer.parseInt(statusInput);
+            statusChoice = Integer.parseInt(sc.nextLine().trim());
         } catch (NumberFormatException e) {
             System.out.println("Invalid choice. Returning to menu.");
             return;
         }
 
-        String newStatus;
-
-        switch (statusChoice) {
-            case 1:
-                newStatus = "Assigned";
-                break;
-            case 2:
-                newStatus = "Fixed";
-                break;
-            case 3:
-                newStatus = "Verified";
-                break;
-            case 4:
-                newStatus = "Closed";
-                break;
-            case 5:
-                newStatus = "Reopened";
-                break;
-            default:
-                System.out.println("Invalid status choice. Please choose 1 to 5.");
-                return;
+        if (statusChoice < 1 || statusChoice > STATUS_OPTIONS.length) {
+            System.out.println("Invalid status choice. Please choose 1 to 5.");
+            return;
         }
+        String newStatus = STATUS_OPTIONS[statusChoice - 1];
 
-        boolean validTransition = false;
-
-        // Valid transitions check
-        if (selectedBug.status.equals("New") && newStatus.equals("Assigned")) {
-            validTransition = true;
-        } else if (selectedBug.status.equals("Assigned") && newStatus.equals("Fixed")) {
-            validTransition = true;
-        } else if (selectedBug.status.equals("Fixed") && newStatus.equals("Verified")) {
-            validTransition = true;
-        } else if (selectedBug.status.equals("Verified") &&
-                  (newStatus.equals("Closed") || newStatus.equals("Reopened"))) {
-            validTransition = true;
-        } else if (selectedBug.status.equals("Reopened") && newStatus.equals("Assigned")) {
-            validTransition = true;
-        }
-
-        if (validTransition) {
-            // If moving to Assigned and developer is currently unassigned, ask for developer
-            if (newStatus.equals("Assigned") && selectedBug.developer.equals("Unassigned")) {
-                selectedBug.developer = readNonEmptyString("Enter developer name to assign: ");
-            }
-
-            selectedBug.status = newStatus;
-
-            // Track reopen count
-            if (newStatus.equals("Reopened")) {
-                selectedBug.reopenCount++;
-                System.out.println("Notice: Bug has been reopened! Reopen count: " + selectedBug.reopenCount);
-            }
-
-            System.out.println("\nStatus updated successfully!");
-            System.out.println("Bug ID " + selectedBug.bugId + " new status: " + selectedBug.status);
-
-        } else {
-            System.out.println("\nInvalid status transition from '" + selectedBug.status + "' to '" + newStatus + "'!");
+        // Check the lifecycle rules
+        if (!canMoveTo(bug, newStatus)) {
+            System.out.println("\nInvalid status transition from '" + bug.status + "' to '" + newStatus + "'!");
             System.out.println("Allowed lifecycle transitions:");
             System.out.println("  - New -> Assigned");
             System.out.println("  - Assigned -> Fixed");
@@ -306,7 +272,23 @@ public class Main {
             System.out.println("  - Verified -> Closed");
             System.out.println("  - Verified -> Reopened");
             System.out.println("  - Reopened -> Assigned");
+            return;
         }
+
+        // Moving to Assigned with no developer yet: ask for one
+        if (newStatus.equals("Assigned") && bug.developer.equals("Unassigned")) {
+            bug.developer = readNonEmptyString("Enter developer name to assign: ");
+        }
+
+        bug.status = newStatus;
+
+        if (newStatus.equals("Reopened")) {
+            bug.reopenCount++;
+            System.out.println("Notice: Bug has been reopened! Reopen count: " + bug.reopenCount);
+        }
+
+        System.out.println("\nStatus updated successfully!");
+        System.out.println("Bug ID " + bug.bugId + " new status: " + bug.status);
     }
 
     // Feature 5: Generate reports
@@ -359,12 +341,7 @@ public class Main {
         HashMap<String, Integer> moduleCount = new HashMap<>();
 
         for (Bug bug : bugs) {
-            String module = bug.module;
-            if (moduleCount.containsKey(module)) {
-                moduleCount.put(module, moduleCount.get(module) + 1);
-            } else {
-                moduleCount.put(module, 1);
-            }
+            moduleCount.put(bug.module, moduleCount.getOrDefault(bug.module, 0) + 1);
         }
 
         String maxModule = "";
