@@ -1,270 +1,201 @@
-import java.util.Scanner;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Scanner;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 
 public class Main {
 
+    static class Bug {
+        int id;
+        String title;
+        String module;
+        String severity;
+        String steps;
+        String developer = "Unassigned";
+        String status = "New";
+        int reopened = 0;
+        LocalDate created = LocalDate.now();
+    }
+
     static Scanner sc = new Scanner(System.in);
     static ArrayList<Bug> bugs = new ArrayList<>();
-    static int nextBugId = 101;
+    static int nextId = 101;
 
     public static void main(String[] args) {
-
         System.out.println("Welcome to BugBoard");
         System.out.println("Defect Lifecycle Tracking System");
 
-        int choice;
-
-        do {
+        int choice = 0;
+        while (choice != 6) {
             System.out.println("\n========== BUGBOARD ==========");
             System.out.println("1. Log a new bug");
             System.out.println("2. View all bugs");
             System.out.println("3. Assign a bug to developer");
             System.out.println("4. Update bug status");
             System.out.println("5. Generate reports");
-            System.out.println("6. Search bug by ID");
-            System.out.println("7. View bugs by developer");
-            System.out.println("8. Clear all bugs");
-            System.out.println("9. Exit");
+            System.out.println("6. Exit");
             System.out.print("Enter your choice: ");
 
-            String input = sc.nextLine();
-
             try {
-                choice = Integer.parseInt(input);
+                choice = Integer.parseInt(sc.nextLine());
             } catch (NumberFormatException e) {
                 choice = 0;
             }
 
-            switch (choice) {
-
-                case 1:
-                    logBug();
-                    break;
-
-                case 2:
-                    viewAllBugs();
-                    break;
-
-                case 3:
-                    assignBug();
-                    break;
-
-                case 4:
-                    updateBugStatus();
-                    break;
-
-                case 5:
-                    generateReports();
-                    break;
-
-                case 6:
-                    searchBugById();
-                    break;
-
-                case 7:
-                    viewBugsByDeveloper();
-                    break;
-
-                case 8:
-                    clearAllBugs();
-                    break;
-
-                case 9:
-                    System.out.println("Exiting BugBoard... Thank you!");
-                    break;
-
-                default:
-                    System.out.println("Invalid choice. Please enter a number between 1 and 9.");
-            }
-
-        } while (choice != 9);
-
-        sc.close();
-    }
-
-    // Helper: Find a bug by its ID
-    static Bug findBugById(int id) {
-        for (Bug bug : bugs) {
-            if (bug.bugId == id) {
-                return bug;
-            }
+            if (choice == 1) logBug();
+            else if (choice == 2) viewAll();
+            else if (choice == 3) assignBug();
+            else if (choice == 4) updateStatus();
+            else if (choice == 5) reports();
+            else if (choice == 6) System.out.println("Exiting BugBoard... Thank you!");
+            else System.out.println("Invalid choice. Please enter a number between 1 and 6.");
         }
-        return null;
     }
 
-    // Helper: Read a non-empty string from user input
-    static String readNonEmptyString(String prompt) {
-        String input;
-        do {
-            System.out.print(prompt);
-            input = sc.nextLine().trim();
-            if (input.isEmpty()) {
-                System.out.println("Error: Input cannot be empty. Please try again.");
-            }
-        } while (input.isEmpty());
-        return input;
-    }
-
-    // Helper: Read a valid integer from user input
-    static int readInteger(String prompt) {
+    static String askText(String question) {
         while (true) {
-            System.out.print(prompt);
-            String input = sc.nextLine().trim();
+            System.out.print(question);
+            String text = sc.nextLine().trim();
+            if (!text.isEmpty()) return text;
+            System.out.println("Error: Input cannot be empty. Please try again.");
+        }
+    }
+
+    static int askNumber(String question) {
+        while (true) {
+            System.out.print(question);
             try {
-                return Integer.parseInt(input);
+                return Integer.parseInt(sc.nextLine().trim());
             } catch (NumberFormatException e) {
                 System.out.println("Error: Invalid number format. Please enter digits only.");
             }
         }
     }
 
-    // Allowed severity values
-    static final String[] SEVERITIES = {"Low", "Medium", "High", "Critical"};
-
-    // Helper: Read and validate bug severity
-    static String readSeverity() {
+    static String askSeverity() {
         while (true) {
             System.out.print("Enter bug severity (Low / Medium / High / Critical): ");
-            String input = sc.nextLine().trim();
-
-            for (String severity : SEVERITIES) {
-                if (severity.equalsIgnoreCase(input)) {
-                    return severity;
-                }
-            }
+            String s = sc.nextLine().trim();
+            if (s.equalsIgnoreCase("Low")) return "Low";
+            if (s.equalsIgnoreCase("Medium")) return "Medium";
+            if (s.equalsIgnoreCase("High")) return "High";
+            if (s.equalsIgnoreCase("Critical")) return "Critical";
             System.out.println("Invalid severity! Allowed values are: Low, Medium, High, Critical.");
         }
     }
 
-    // Helper: Print formatted details of a single bug
-    static void printBugDetails(Bug bug) {
-        System.out.println("Bug ID             : " + bug.bugId);
-        System.out.println("Title              : " + bug.title);
-        System.out.println("Module             : " + bug.module);
-        System.out.println("Severity           : " + bug.severity);
-        System.out.println("Steps to Reproduce : " + bug.stepsToReproduce);
-        System.out.println("Developer          : " + bug.developer);
-        System.out.println("Status             : " + bug.status);
-        System.out.println("Reopen Count       : " + bug.reopenCount);
-        System.out.println("Created Date       : " + bug.createdDate);
+    static Bug findBug(int id) {
+        for (Bug b : bugs) {
+            if (b.id == id) return b;
+        }
+        return null;
+    }
+
+    static void show(Bug b) {
+        System.out.println("Bug ID             : " + b.id);
+        System.out.println("Title              : " + b.title);
+        System.out.println("Module             : " + b.module);
+        System.out.println("Severity           : " + b.severity);
+        System.out.println("Steps to Reproduce : " + b.steps);
+        System.out.println("Developer          : " + b.developer);
+        System.out.println("Status             : " + b.status);
+        System.out.println("Reopen Count       : " + b.reopened);
+        System.out.println("Created Date       : " + b.created);
         System.out.println("----------------------------------------");
     }
 
-    // Feature 1: Log a new bug
     static void logBug() {
         System.out.println("\n--- Log a New Bug ---");
-
-        Bug bug = new Bug();
-        bug.bugId = nextBugId++;
-
-        bug.title = readNonEmptyString("Enter bug title: ");
-        bug.module = readNonEmptyString("Enter bug module: ");
-        bug.severity = readSeverity();
-        bug.stepsToReproduce = readNonEmptyString("Enter steps to reproduce: ");
-
-        bugs.add(bug);
-
+        Bug b = new Bug();
+        b.id = nextId++;
+        b.title = askText("Enter bug title: ");
+        b.module = askText("Enter bug module: ");
+        b.severity = askSeverity();
+        b.steps = askText("Enter steps to reproduce: ");
+        bugs.add(b);
         System.out.println("\nBug logged successfully!");
-        System.out.println("Generated Bug ID: " + bug.bugId);
+        System.out.println("Generated Bug ID: " + b.id);
     }
 
-    // Feature 2: View all bugs
-    static void viewAllBugs() {
+    static void viewAll() {
         System.out.println("\n--- All Logged Bugs ---");
-
         if (bugs.isEmpty()) {
             System.out.println("No bugs found.");
             return;
         }
-
         System.out.println("Total bugs: " + bugs.size() + "\n");
-        for (Bug bug : bugs) {
-            printBugDetails(bug);
-        }
+        for (Bug b : bugs) show(b);
     }
 
-    // Feature 3: Assign bug to developer
     static void assignBug() {
         System.out.println("\n--- Assign Bug to Developer ---");
-
-        int id = readInteger("Enter Bug ID: ");
-
-        Bug bug = findBugById(id);
-
-        if (bug == null) {
+        int id = askNumber("Enter Bug ID: ");
+        Bug b = findBug(id);
+        if (b == null) {
             System.out.println("Error: Bug ID " + id + " not found.");
             return;
         }
-
-        if (!bug.status.equals("New") && !bug.status.equals("Reopened")) {
-            System.out.println("Error: Bug cannot be assigned in its current status ('" + bug.status + "').");
+        if (!b.status.equals("New") && !b.status.equals("Reopened")) {
+            System.out.println("Error: Bug cannot be assigned in its current status ('" + b.status + "').");
             System.out.println("Only bugs with status 'New' or 'Reopened' can be assigned to a developer.");
             return;
         }
-
-        bug.developer = readNonEmptyString("Enter developer name: ");
-        bug.status = "Assigned";
-
+        b.developer = askText("Enter developer name: ");
+        b.status = "Assigned";
         System.out.println("\nBug assigned successfully!");
-        System.out.println("Bug ID " + bug.bugId + " is now assigned to: " + bug.developer);
-        System.out.println("Status updated to: " + bug.status);
+        System.out.println("Bug ID " + b.id + " is now assigned to: " + b.developer);
+        System.out.println("Status updated to: " + b.status);
     }
 
-    // Status options shown in the "Update status" menu (menu number = index + 1)
-    static final String[] STATUS_OPTIONS = {"Assigned", "Fixed", "Verified", "Closed", "Reopened"};
-
-    // Lifecycle rule: can this bug move from its current status to newStatus?
-    static boolean canMoveTo(Bug bug, String newStatus) {
-        switch (bug.status) {
-            case "New":      return newStatus.equals("Assigned");
-            case "Assigned": return newStatus.equals("Fixed");
-            case "Fixed":    return newStatus.equals("Verified");
-            case "Verified": return newStatus.equals("Closed") || newStatus.equals("Reopened");
-            case "Reopened": return newStatus.equals("Assigned");
-            default:         return false;   // Closed bugs cannot move anywhere
-        }
+    static boolean validMove(String from, String to) {
+        return (from.equals("New") && to.equals("Assigned"))
+            || (from.equals("Assigned") && to.equals("Fixed"))
+            || (from.equals("Fixed") && to.equals("Verified"))
+            || (from.equals("Verified") && to.equals("Closed"))
+            || (from.equals("Verified") && to.equals("Reopened"))
+            || (from.equals("Reopened") && to.equals("Assigned"));
     }
 
-    // Feature 4: Update bug lifecycle status
-    static void updateBugStatus() {
+    static void updateStatus() {
         System.out.println("\n--- Update Bug Lifecycle Status ---");
-
-        int id = readInteger("Enter Bug ID: ");
-        Bug bug = findBugById(id);
-
-        if (bug == null) {
+        int id = askNumber("Enter Bug ID: ");
+        Bug b = findBug(id);
+        if (b == null) {
             System.out.println("Error: Bug ID " + id + " not found.");
             return;
         }
 
-        System.out.println("Selected Bug   : [" + bug.bugId + "] " + bug.title);
-        System.out.println("Current Status : " + bug.status);
+        System.out.println("Selected Bug   : [" + b.id + "] " + b.title);
+        System.out.println("Current Status : " + b.status);
         System.out.println("\nSelect new status:");
-        for (int i = 0; i < STATUS_OPTIONS.length; i++) {
-            System.out.println((i + 1) + ". " + STATUS_OPTIONS[i]);
-        }
+        System.out.println("1. Assigned");
+        System.out.println("2. Fixed");
+        System.out.println("3. Verified");
+        System.out.println("4. Closed");
+        System.out.println("5. Reopened");
         System.out.print("Enter choice (1-5): ");
 
-        int statusChoice;
+        int pick;
         try {
-            statusChoice = Integer.parseInt(sc.nextLine().trim());
+            pick = Integer.parseInt(sc.nextLine().trim());
         } catch (NumberFormatException e) {
             System.out.println("Invalid choice. Returning to menu.");
             return;
         }
 
-        if (statusChoice < 1 || statusChoice > STATUS_OPTIONS.length) {
+        String newStatus;
+        if (pick == 1) newStatus = "Assigned";
+        else if (pick == 2) newStatus = "Fixed";
+        else if (pick == 3) newStatus = "Verified";
+        else if (pick == 4) newStatus = "Closed";
+        else if (pick == 5) newStatus = "Reopened";
+        else {
             System.out.println("Invalid status choice. Please choose 1 to 5.");
             return;
         }
-        String newStatus = STATUS_OPTIONS[statusChoice - 1];
 
-        // Check the lifecycle rules
-        if (!canMoveTo(bug, newStatus)) {
-            System.out.println("\nInvalid status transition from '" + bug.status + "' to '" + newStatus + "'!");
+        if (!validMove(b.status, newStatus)) {
+            System.out.println("\nInvalid status transition from '" + b.status + "' to '" + newStatus + "'!");
             System.out.println("Allowed lifecycle transitions:");
             System.out.println("  - New -> Assigned");
             System.out.println("  - Assigned -> Fixed");
@@ -275,25 +206,22 @@ public class Main {
             return;
         }
 
-        // Moving to Assigned with no developer yet: ask for one
-        if (newStatus.equals("Assigned") && bug.developer.equals("Unassigned")) {
-            bug.developer = readNonEmptyString("Enter developer name to assign: ");
+        if (newStatus.equals("Assigned") && b.developer.equals("Unassigned")) {
+            b.developer = askText("Enter developer name to assign: ");
         }
 
-        bug.status = newStatus;
+        b.status = newStatus;
 
         if (newStatus.equals("Reopened")) {
-            bug.reopenCount++;
-            System.out.println("Notice: Bug has been reopened! Reopen count: " + bug.reopenCount);
+            b.reopened++;
+            System.out.println("Notice: Bug has been reopened! Reopen count: " + b.reopened);
         }
 
         System.out.println("\nStatus updated successfully!");
-        System.out.println("Bug ID " + bug.bugId + " new status: " + bug.status);
+        System.out.println("Bug ID " + b.id + " new status: " + b.status);
     }
 
-    // Feature 5: Generate reports
-    static void generateReports() {
-
+    static void reports() {
         if (bugs.isEmpty()) {
             System.out.println("\nNo bugs available for reports.");
             return;
@@ -301,121 +229,51 @@ public class Main {
 
         System.out.println("\n========== BUG REPORTS ==========");
         System.out.println("Total Bugs in System: " + bugs.size());
-
-        // 1. Open Bugs by Age
         System.out.println("\n--- Open Bugs by Age ---");
 
-        int openBugsCount = 0;
-        int closedBugsCount = 0;
-
-        for (Bug bug : bugs) {
-
-            if (!bug.status.equals("Closed")) {
-                openBugsCount++;
-                long age = ChronoUnit.DAYS.between(
-                    bug.createdDate,
-                    LocalDate.now()
-                );
-
-                System.out.println(
-                    "Bug ID: " + bug.bugId +
-                    " | Title: " + bug.title +
-                    " | Module: " + bug.module +
-                    " | Status: " + bug.status +
-                    " | Age: " + age + " day(s)"
-                );
+        int open = 0;
+        int closed = 0;
+        for (Bug b : bugs) {
+            if (b.status.equals("Closed")) {
+                closed++;
             } else {
-                closedBugsCount++;
+                open++;
+                long age = ChronoUnit.DAYS.between(b.created, LocalDate.now());
+                System.out.println("Bug ID: " + b.id + " | Title: " + b.title + " | Module: " + b.module
+                        + " | Status: " + b.status + " | Age: " + age + " day(s)");
             }
         }
 
-        if (openBugsCount == 0) {
-            System.out.println("No open bugs found. All bugs are Closed!");
-        } else {
-            System.out.println("Total Open Bugs: " + openBugsCount);
-        }
-        System.out.println("Total Closed Bugs: " + closedBugsCount);
+        if (open == 0) System.out.println("No open bugs found. All bugs are Closed!");
+        else System.out.println("Total Open Bugs: " + open);
+        System.out.println("Total Closed Bugs: " + closed);
 
-        // 2. Bugs grouped by Module using HashMap
         System.out.println("\n--- Bugs Grouped by Module ---");
-        HashMap<String, Integer> moduleCount = new HashMap<>();
+        String topModule = "";
+        int topCount = 0;
+        for (int i = 0; i < bugs.size(); i++) {
+            String module = bugs.get(i).module;
 
-        for (Bug bug : bugs) {
-            moduleCount.put(bug.module, moduleCount.getOrDefault(bug.module, 0) + 1);
-        }
+            boolean seen = false;
+            for (int j = 0; j < i; j++) {
+                if (bugs.get(j).module.equals(module)) seen = true;
+            }
+            if (seen) continue;
 
-        String maxModule = "";
-        int maxCount = 0;
-
-        for (String module : moduleCount.keySet()) {
-            int count = moduleCount.get(module);
+            int count = 0;
+            for (Bug b : bugs) {
+                if (b.module.equals(module)) count++;
+            }
             System.out.println("  - " + module + ": " + count + " bug(s)");
 
-            if (count > maxCount) {
-                maxCount = count;
-                maxModule = module;
+            if (count > topCount) {
+                topCount = count;
+                topModule = module;
             }
         }
 
-        System.out.println("\nModule with highest number of bugs : " + maxModule);
-        System.out.println("Total bugs in this module          : " + maxCount);
+        System.out.println("\nModule with highest number of bugs : " + topModule);
+        System.out.println("Total bugs in this module          : " + topCount);
         System.out.println("=================================");
-    }
-
-    // Additional Improvement 1: Search Bug by ID
-    static void searchBugById() {
-        System.out.println("\n--- Search Bug by ID ---");
-        int id = readInteger("Enter Bug ID to search: ");
-
-        Bug bug = findBugById(id);
-
-        if (bug == null) {
-            System.out.println("Error: No bug found with ID " + id + ".");
-        } else {
-            System.out.println("\nBug Found:");
-            System.out.println("----------------------------------------");
-            printBugDetails(bug);
-        }
-    }
-
-    // Additional Improvement 2: View Bugs by Developer
-    static void viewBugsByDeveloper() {
-        System.out.println("\n--- View Bugs by Developer ---");
-        String devName = readNonEmptyString("Enter developer name: ");
-
-        boolean found = false;
-        System.out.println("\nBugs assigned to '" + devName + "':");
-        System.out.println("----------------------------------------");
-
-        for (Bug bug : bugs) {
-            if (bug.developer.equalsIgnoreCase(devName)) {
-                printBugDetails(bug);
-                found = true;
-            }
-        }
-
-        if (!found) {
-            System.out.println("No bugs found assigned to developer: " + devName);
-        }
-    }
-
-    // Additional Improvement 3: Clear all bugs
-    static void clearAllBugs() {
-        System.out.println("\n--- Clear All Bugs ---");
-        if (bugs.isEmpty()) {
-            System.out.println("The bug list is already empty.");
-            return;
-        }
-
-        System.out.print("Are you sure you want to delete all " + bugs.size() + " bug(s)? (yes/no): ");
-        String confirm = sc.nextLine().trim();
-
-        if (confirm.equalsIgnoreCase("yes") || confirm.equalsIgnoreCase("y")) {
-            bugs.clear();
-            nextBugId = 101;
-            System.out.println("All bugs have been successfully cleared. Bug ID counter reset to 101.");
-        } else {
-            System.out.println("Operation cancelled. No bugs were deleted.");
-        }
     }
 }
